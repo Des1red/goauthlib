@@ -2,8 +2,8 @@ package auth
 
 import (
 	"errors"
-	"goauth/internal/tokens"
-	"goauth/internal/uuid"
+	"goauthlib/internal/tokens"
+	"goauthlib/internal/uuid"
 	"net/http"
 	"time"
 )

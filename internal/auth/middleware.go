@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"goauth/internal/tokens"
-	"goauth/internal/uuid"
+	"goauthlib/internal/tokens"
+	"goauthlib/internal/uuid"
 	"net/http"
 	"strings"
 )

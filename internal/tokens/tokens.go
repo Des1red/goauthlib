@@ -2,8 +2,8 @@ package tokens
 
 import (
 	"errors"
-	"goauth/internal/csrf"
-	"goauth/internal/uuid"
+	"goauthlib/internal/csrf"
+	"goauthlib/internal/uuid"
 	"net/http"
 	"time"
 )

@@ -2,8 +2,8 @@ package goauth
 
 import (
 	"context"
-	"goauth/internal/auth"
-	"goauth/internal/tokens"
+	"goauthlib/internal/auth"
+	"goauthlib/internal/tokens"
 )
 
 // FromContext returns the JWT payload or nil

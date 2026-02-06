@@ -2,7 +2,7 @@ package auth
 
 import (
 	"encoding/json"
-	"goauth/internal/tokens"
+	"goauthlib/internal/tokens"
 	"net/http"
 	"strings"
 )

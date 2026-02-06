@@ -27,7 +27,7 @@ You must configure JWT secret and token store once at startup.
 ```go
 import (
     "os"
-    "github.com/Des1red/goauth"
+    "github.com/Des1red/goauthlib"
 )
 
 

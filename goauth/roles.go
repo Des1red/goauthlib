@@ -1,6 +1,6 @@
 package goauth
 
-import "goauth/internal/tokens"
+import "goauthlib/internal/tokens"
 
 const (
 	RoleAnonymous = tokens.RoleAnonymous

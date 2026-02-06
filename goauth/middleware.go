@@ -1,9 +1,9 @@
 package goauth
 
 import (
-	"goauth/internal/auth"
-	"goauth/internal/csrf"
-	"goauth/internal/tokens"
+	"goauthlib/internal/auth"
+	"goauthlib/internal/csrf"
+	"goauthlib/internal/tokens"
 	"net/http"
 )
 

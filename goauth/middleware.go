@@ -1,10 +1,11 @@
 package goauth
 
 import (
-	"goauthlib/internal/auth"
-	"goauthlib/internal/csrf"
-	"goauthlib/internal/tokens"
 	"net/http"
+
+	"github.com/Des1red/goauthlib/internal/auth"
+	"github.com/Des1red/goauthlib/internal/csrf"
+	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
 // Auth attaches authentication context (anonymous allowed)

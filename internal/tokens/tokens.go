@@ -2,10 +2,11 @@ package tokens
 
 import (
 	"errors"
-	"goauthlib/internal/csrf"
-	"goauthlib/internal/uuid"
 	"net/http"
 	"time"
+
+	"github.com/Des1red/goauthlib/internal/csrf"
+	"github.com/Des1red/goauthlib/internal/uuid"
 )
 
 // TokenExists allows middleware to check token validity

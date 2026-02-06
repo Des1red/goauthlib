@@ -2,9 +2,10 @@ package auth
 
 import (
 	"encoding/json"
-	"goauthlib/internal/tokens"
 	"net/http"
 	"strings"
+
+	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
 //----------------------------------------------------------------

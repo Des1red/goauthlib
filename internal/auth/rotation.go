@@ -2,10 +2,11 @@ package auth
 
 import (
 	"errors"
-	"goauthlib/internal/tokens"
-	"goauthlib/internal/uuid"
 	"net/http"
 	"time"
+
+	"github.com/Des1red/goauthlib/internal/tokens"
+	"github.com/Des1red/goauthlib/internal/uuid"
 )
 
 func refreshAccessToken(

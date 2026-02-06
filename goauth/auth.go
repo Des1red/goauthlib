@@ -1,8 +1,9 @@
 package goauth
 
 import (
-	"goauthlib/internal/tokens"
 	"net/http"
+
+	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
 // --------------------

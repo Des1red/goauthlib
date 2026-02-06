@@ -2,7 +2,8 @@ package auth
 
 import (
 	"context"
-	"goauthlib/internal/tokens"
+
+	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
 func FromContext(ctx context.Context) *tokens.JWTPayload {

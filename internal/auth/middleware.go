@@ -5,10 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"goauthlib/internal/tokens"
-	"goauthlib/internal/uuid"
 	"net/http"
 	"strings"
+
+	"github.com/Des1red/goauthlib/internal/tokens"
+	"github.com/Des1red/goauthlib/internal/uuid"
 )
 
 // =========================

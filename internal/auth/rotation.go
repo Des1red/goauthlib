@@ -12,7 +12,6 @@ import (
 func refreshAccessToken(
 	refreshToken string,
 	w http.ResponseWriter,
-	r *http.Request,
 ) (string, error) {
 
 	// 1. Verify refresh token

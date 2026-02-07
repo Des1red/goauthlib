@@ -196,8 +196,6 @@ func ExpireCsrfToken(w http.ResponseWriter) {
 	http.SetCookie(w, cookie("csrf_token", "", false, time.Unix(0, 0), -1))
 }
 
-// NOTE: your middleware calls tokens.ExpireSessionKilledToken(w)
-// so this must be exported.
 func ExpireSessionKilledToken(w http.ResponseWriter) {
 	http.SetCookie(w, cookie("session_killed", "true", true, time.Unix(0, 0), -1))
 }

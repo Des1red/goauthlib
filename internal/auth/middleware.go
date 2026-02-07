@@ -100,7 +100,7 @@ func authenticateRequest(
 		if !ok {
 			return nil, r, false
 		}
-		newAccess, err := refreshAccessToken(refreshTok, w, r)
+		newAccess, err := refreshAccessToken(refreshTok, w)
 		if err != nil {
 			return nil, r, false
 		}
@@ -115,6 +115,28 @@ func authenticateRequest(
 	}
 
 	return nil, r, false
+}
+
+func checkForAnonymousPayload(token string) *tokens.JWTPayload {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil
+	}
+
+	var payload tokens.JWTPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil
+	}
+
+	if payload.Role == tokens.RoleAnonymous {
+		return &payload
+	}
+	return nil
 }
 
 // =========================
@@ -139,30 +161,4 @@ func checkAccessJTI(
 		return false
 	}
 	return true
-}
-
-// =========================
-// helpers
-// =========================
-
-func checkForAnonymousPayload(token string) *tokens.JWTPayload {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return nil
-	}
-
-	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil
-	}
-
-	var payload tokens.JWTPayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil
-	}
-
-	if payload.Role == tokens.RoleAnonymous {
-		return &payload
-	}
-	return nil
 }

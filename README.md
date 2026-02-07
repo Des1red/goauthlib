@@ -18,7 +18,7 @@ You configure once, then call high-level helpers.
 
 #### Installation
 ```
-go get github.com/Des1red/goauth
+go get github.com/Des1red/goauthlib
 ```
 
 Initialization (required)

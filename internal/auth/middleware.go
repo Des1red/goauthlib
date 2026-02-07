@@ -44,7 +44,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// 3) Enforce JTI
-		if !checkAccessJTI(w, r2, payload) {
+		if !checkAccessJTI(w, payload) {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -56,14 +56,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // =========================
 // helpers
 // =========================
-
-func writeAPIUnauthorized(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"error": "unauthorized",
-	})
-}
 
 func clearSessionKilledIfPresent(w http.ResponseWriter, r *http.Request) {
 	if ck, err := r.Cookie("session_killed"); err == nil && ck.Value == "true" {
@@ -102,6 +94,24 @@ func authenticateRequest(
 			tokens.CreateAnonymousToken(w, u)
 			return anon, r.WithContext(ctx), true
 		}
+
+		// 2. Try refresh
+		refreshTok, ok := getCookieValue(r, "refresh_token")
+		if !ok {
+			return nil, r, false
+		}
+		newAccess, err := refreshAccessToken(refreshTok, w, r)
+		if err != nil {
+			return nil, r, false
+		}
+		// 3. Verify new access token
+		payload, err = tokens.VerifyJWT(newAccess, tokens.TokenTypeAccess)
+		if err != nil {
+			return nil, r, false
+		}
+		ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
+		return payload, r.WithContext(ctx), true
+
 	}
 
 	return nil, r, false
@@ -113,7 +123,6 @@ func authenticateRequest(
 
 func checkAccessJTI(
 	w http.ResponseWriter,
-	r *http.Request,
 	payload *tokens.JWTPayload,
 ) bool {
 

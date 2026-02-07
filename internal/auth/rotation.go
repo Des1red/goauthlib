@@ -27,9 +27,12 @@ func refreshAccessToken(
 	}
 
 	// 3. Check refresh JTI exists (one-time-use)
-	if err := tokens.DeleteToken(payload.JTI); err != nil {
-		// ErrTokenNotFound means replay or already-used refresh token
+	exists, err := tokens.TokenExists(payload.JTI)
+	if err != nil || !exists {
 		return "", errors.New("refresh token already used or invalid")
+	}
+	if err := tokens.DeleteToken(payload.JTI); err != nil {
+		return "", errors.New("failed to revoke refresh token")
 	}
 
 	// 4. Revoke old access token (if linked)

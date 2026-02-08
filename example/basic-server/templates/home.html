@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<body>
+  <h2>Authenticated</h2>
+
+  <p><b>UserID:</b> {{.UserID}}</p>
+  <p><b>Role:</b> {{.Role}}</p>
+
+  <h3>Access Token (HttpOnly cookie)</h3>
+  <pre>{{.AccessToken}}</pre>
+
+  <h3>Refresh Token (HttpOnly cookie)</h3>
+  <pre>{{.RefreshToken}}</pre>
+
+  <h3>CSRF Token (readable by frontend)</h3>
+  <pre>{{.CSRFToken}}</pre>
+
+  <h3>Decoded JWT Claims (BACKEND-VERIFIED)</h3>
+  <pre>{{ printf "%+v" .Claims }}</pre>
+
+  <button id="update">Fake Update Profile (POST)</button>
+
+  <form method="POST" action="/logout">
+    <button type="submit">Logout</button>
+  </form>
+
+  <script>
+    document.getElementById('update').onclick = async () => {
+      const csrf = "{{.CSRFToken}}";
+
+      const res = await fetch('/profile/update', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': csrf
+        }
+      });
+
+      alert(await res.text());
+    };
+  </script>
+
+  <p>
+    <em>
+      Tokens are verified and enforced on the backend.
+      Displayed values are for demonstration only.
+    </em>
+  </p>
+</body>
+</html>

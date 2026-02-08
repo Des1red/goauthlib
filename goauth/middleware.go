@@ -5,8 +5,14 @@ import (
 
 	"github.com/Des1red/goauthlib/internal/auth"
 	"github.com/Des1red/goauthlib/internal/csrf"
+	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 )
+
+// Enables Verbose mode (only for developement)
+func Verbose() {
+	logger.EnableVerbose()
+}
 
 // Auth attaches authentication context (anonymous allowed)
 func Auth(h http.HandlerFunc) http.HandlerFunc {

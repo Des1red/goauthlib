@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 	"github.com/Des1red/goauthlib/internal/uuid"
 )
@@ -80,7 +81,7 @@ func authenticateRequest(
 	r *http.Request,
 	accessToken string,
 ) (*tokens.JWTPayload, *http.Request, bool) {
-
+	logger.Log("Validating access token: " + accessToken)
 	payload, err := tokens.VerifyJWT(accessToken, tokens.TokenTypeAccess)
 	if err == nil {
 		ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
@@ -98,8 +99,11 @@ func authenticateRequest(
 		// 2. Try refresh
 		refreshTok, ok := getCookieValue(r, "refresh_token")
 		if !ok {
+			logger.Log("Refresh token not found in cookies")
 			return nil, r, false
 		}
+		logger.Log("Found refresh token:" + refreshTok)
+
 		newAccess, err := refreshAccessToken(refreshTok, w)
 		if err != nil {
 			return nil, r, false

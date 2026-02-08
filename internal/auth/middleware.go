@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,8 @@ type jwtContextKey struct{}
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger.Newline()
+		logger.Log("AuthMiddleware entered")
 
 		clearSessionKilledIfPresent(w, r)
 
@@ -41,12 +44,21 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// 2) Validate access token
 		payload, r2, ok := authenticateRequest(w, r, tok)
 		if !ok {
+			logger.Log("Unauthenticated request")
 			authError.Handle(w, r, authError.ErrUnauthorized)
 			return
 		}
 
 		// 3) Enforce JTI
 		if !checkAccessJTI(payload) {
+			logger.Log(
+				fmt.Sprintf(
+					"Access token rejected: JTI not found user_id=%d role=%s jti=%s",
+					payload.UserID,
+					payload.Role,
+					payload.JTI,
+				),
+			)
 			authError.Handle(w, r, authError.ErrUnauthorized)
 			return
 		}
@@ -105,7 +117,7 @@ func authenticateRequest(
 		}
 		logger.Log("Found refresh token:" + refreshTok)
 
-		newAccess, err := refreshAccessToken(refreshTok, w)
+		newAccess, err := refreshAccessToken(refreshTok, w, r)
 		if err != nil {
 			return nil, r, false
 		}
@@ -118,6 +130,8 @@ func authenticateRequest(
 		return payload, r.WithContext(ctx), true
 
 	}
+	// log any other type of error
+	logger.Log("Access token invalid: " + err.Error())
 
 	return nil, r, false
 }

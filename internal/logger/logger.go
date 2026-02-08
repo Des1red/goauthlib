@@ -1,6 +1,9 @@
 package logger
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 var verbose = false
 
@@ -10,5 +13,11 @@ func EnableVerbose() {
 func Log(message string) {
 	if verbose {
 		log.Println(message)
+	}
+}
+
+func Newline() {
+	if verbose {
+		fmt.Println()
 	}
 }

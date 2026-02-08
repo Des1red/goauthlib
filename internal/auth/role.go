@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Des1red/goauthlib/internal/authError"
+	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
@@ -17,16 +19,26 @@ func RequireRoleMiddleware(allowedRoles ...string) func(http.HandlerFunc) http.H
 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
+			logger.Log("RequireRole middleware entered")
 			payload, ok := r.Context().Value(jwtContextKey{}).(*tokens.JWTPayload)
 
 			// Not authenticated
 			if !ok || payload == nil {
+				logger.Log("RequireRole: unauthenticated request")
 				authError.Handle(w, r, authError.ErrUnauthorized)
 				return
 			}
 
 			// Authenticated but forbidden
 			if _, allowed := roleSet[payload.Role]; !allowed {
+				logger.Log(
+					fmt.Sprintf(
+						"RequireRole: forbidden access user_id=%d role=%s allowed=%v",
+						payload.UserID,
+						payload.Role,
+						allowedRoles,
+					),
+				)
 				authError.Handle(w, r, authError.ErrForbidden)
 				return
 			}

@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Des1red/goauthlib/internal/authError"
 	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 	"github.com/Des1red/goauthlib/internal/uuid"
@@ -14,6 +14,7 @@ import (
 func refreshAccessToken(
 	refreshToken string,
 	w http.ResponseWriter,
+	r *http.Request,
 ) (string, error) {
 
 	logger.Log("Starting refreshAccessToken")
@@ -22,27 +23,33 @@ func refreshAccessToken(
 	payload, err := tokens.VerifyJWT(refreshToken, tokens.TokenTypeRefresh)
 	if err != nil {
 		logger.Log(fmt.Sprintf("Error verifying refresh token: %v", err))
-		return "", errors.New("invalid or expired refresh token")
+		return "", err
 	}
 	logger.Log(fmt.Sprintf("Verified refresh token for user %s, role: %s", payload.UUID, payload.Role))
 
 	// 2. Anonymous users cannot refresh
 	if payload.Role == tokens.RoleAnonymous() {
 		logger.Log("Anonymous user attempted to refresh token")
-		return "", errors.New("anonymous users cannot refresh")
+		return "", err
 	}
 
 	// 3. Check refresh JTI exists (one-time-use)
 	exists, err := tokens.TokenExists(payload.JTI)
-	if err != nil || !exists {
-		logger.Log(fmt.Sprintf("Refresh token JTI check failed: %v, exists: %v", err, exists))
-		return "", errors.New("refresh token already used or invalid")
+	if err != nil {
+		logger.Log(fmt.Sprintf("Refresh token JTI lookup failed: %v", err))
+		return "", err
+	}
+
+	if !exists {
+		logger.Log("Refresh token already used or invalid")
+		tokens.ExpireTokens(w, r) // expire tokens to avoid already failed checks
+		return "", authError.ErrUnauthorized
 	}
 
 	logger.Log("Refresh token JTI is valid, deleting used token")
 	if err := tokens.DeleteToken(payload.JTI); err != nil {
 		logger.Log(fmt.Sprintf("Failed to revoke refresh token: %v", err))
-		return "", errors.New("failed to revoke refresh token")
+		return "", err
 	}
 
 	// 4. Revoke old access token (if linked)
@@ -63,12 +70,12 @@ func refreshAccessToken(
 	logger.Log("Storing new refresh and access tokens")
 	if err := tokens.SaveToken(payload.UUID, newRefreshJTI, tokens.TokenTypeRefresh, refreshExpiry); err != nil {
 		logger.Log(fmt.Sprintf("Failed to store new refresh token: %v", err))
-		return "", errors.New("failed to store new refresh token")
+		return "", err
 	}
 
 	if err := tokens.SaveToken(payload.UUID, newAccessJTI, tokens.TokenTypeAccess, accessExpiry); err != nil {
 		logger.Log(fmt.Sprintf("Failed to store new access token: %v", err))
-		return "", errors.New("failed to store new access token")
+		return "", err
 	}
 
 	// 7. Expire old cookies

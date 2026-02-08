@@ -49,8 +49,9 @@ If not configured, safe defaults are used.
 
 ```go
 goauth.Tokens(goauth.TokenConfig{
-    AccessTTL:  5 * time.Minute,
-    RefreshTTL: 12 * time.Hour,
+    AccessTTL:    5 * time.Minute,
+    RefreshTTL:   12 * time.Hour,
+    AnonymousTTL: 2 * time.Minute,
 })
 ```
 
@@ -65,6 +66,46 @@ goauth.Roles(goauth.RolesConfig{
     Admin: "owner",
 })
 ```
+#### Error handling (optional)
+
+goauth separates authorization decisions from error presentation.
+
+Internal logic decides what happened (unauthorized, forbidden, internal error)
+
+Your application decides how it is presented (JSON, HTML, redirects, etc.)
+
+By default, goauth returns plain HTTP errors.
+
+##### Available error types
+- goauth.ErrUnauthorized // 401 – not authenticated / invalid session
+- goauth.ErrForbidden    // 403 – authenticated but wrong role
+- goauth.ErrInternal     // 500 – internal auth failure
+
+##### Custom error handler
+
+You may override error handling globally at startup:
+```
+goauth.Errors(func(w http.ResponseWriter, r *http.Request, err error) {
+    switch err {
+    case goauth.ErrUnauthorized:
+        http.Redirect(w, r, "/login", http.StatusSeeOther)
+    case goauth.ErrForbidden:
+        http.Error(w, "access denied", http.StatusForbidden)
+    default:
+        http.Error(w, "authentication error", http.StatusInternalServerError)
+    }
+})
+```
+
+This allows full control over:
+
+- Redirects
+
+- JSON responses
+
+- HTML pages
+
+- Browser vs API behavior
 
 #### Token store interface
 
@@ -79,6 +120,7 @@ type TokenStore interface {
 
 Example (SQLite / Redis / in-memory all work).
 The library calls this interface internally via a thin wrapper; your implementation is never accessed directly.
+
 #### Middleware usage
 Basic auth (anonymous + logged-in users)
 ```go
@@ -205,3 +247,11 @@ Anonymous role value is configurable via RolesConfig.
 - CSRF tokens are issued automatically but enforced only via CsrfActive middleware
 
 - API-safe (JSON errors only)
+
+- Error presentation is fully customizable
+
+- Authorization logic never performs redirects
+
+- Middleware decisions are deterministic
+
+- Host application controls UX and response format

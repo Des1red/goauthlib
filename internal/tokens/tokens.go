@@ -89,45 +89,47 @@ func cookie(name, value string, httpOnly bool, expires time.Time, maxAge int) *h
 
 var (
 	ErrTokenStoreNotSet = errors.New("token store not set")
+	ErrJWTGeneration    = errors.New("Failed to generate JWT")
+	ErrRefreshInvalid   = errors.New("Failed to generate refresh token")
+	ErrDBInvalid        = errors.New("Invalid database store")
 )
 
 const AnonymousUserID = 0
 
-func CreateAnonymousToken(w http.ResponseWriter, uuid string) {
+func CreateAnonymousToken(w http.ResponseWriter, uuid string) error {
 	token, err := GenerateJWT(uuid, RoleAnonymous(), TokenTypeAccess, "", tokenCfg.AnonymousTTL, AnonymousUserID)
 	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
+		return err
 	}
 	http.SetCookie(w, cookie("auth_token", token, true, time.Time{}, 0))
+	return nil
 }
 
 func CreateAccessToken(
 	w http.ResponseWriter,
 	role, uuid, jti string,
-	userID int) string {
+	userID int) (string, error) {
 
 	token, err := GenerateJWT(uuid, role, TokenTypeAccess, jti, tokenCfg.AccessTTL, userID)
 	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return ""
+		return "", ErrJWTGeneration
 	}
 
 	http.SetCookie(w, cookie("auth_token", token, true, time.Time{}, 0))
-	return token
+	return token, nil
 }
 
 func CreateRefreshToken(
 	w http.ResponseWriter,
 	role, uuid, jti, accessJTI string,
 	userID int,
-) {
+) error {
 	refreshToken, err := GenerateJWT(uuid, role, TokenTypeRefresh, jti, tokenCfg.RefreshTTL, userID, accessJTI)
 	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
+		return ErrRefreshInvalid
 	}
 	http.SetCookie(w, cookie("refresh_token", refreshToken, true, time.Time{}, 0))
+	return nil
 }
 
 func CreateCsrfToken(w http.ResponseWriter) {
@@ -139,10 +141,9 @@ func CreateTokens(
 	w http.ResponseWriter,
 	role string,
 	userID int,
-) {
+) error {
 	if store == nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
+		return ErrDBInvalid
 	}
 
 	// Generate UUID + JTI
@@ -153,21 +154,20 @@ func CreateTokens(
 
 	// Store refresh token & access JTI
 	if err := store.SaveToken(u, refreshJTI, TokenTypeRefresh, expiry); err != nil {
-		http.Error(w, "Failed to store refresh token", http.StatusInternalServerError)
-		return
+		return ErrDBInvalid
 	}
 	if err := store.SaveToken(u, accessJTI, TokenTypeAccess, expiry); err != nil {
-		http.Error(w, "Failed to store access token", http.StatusInternalServerError)
-		return
+		return ErrDBInvalid
 	}
 
 	// expire anonymous/access token cookie first
 	ExpireAccessToken(w)
 
 	// issue tokens
-	_ = CreateAccessToken(w, role, u, accessJTI, userID)
+	_, _ = CreateAccessToken(w, role, u, accessJTI, userID)
 	CreateRefreshToken(w, role, u, refreshJTI, accessJTI, userID)
 	CreateCsrfToken(w)
+	return nil
 }
 
 //----------------------------------------------------------------

@@ -63,7 +63,7 @@ This ensures:
 
 - CSRF protection
 
-- CSRF tokens are:
+CSRF tokens are:
 
 - Automatically created on login and refresh
 
@@ -142,10 +142,6 @@ What goauth does NOT do
 - User storage
 
 - Account lockouts
-
-- Rate limiting (planned)
-
-- OAuth / SSO (future)
 
 These are intentionally left to the host application.
 

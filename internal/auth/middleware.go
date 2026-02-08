@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Des1red/goauthlib/internal/authError"
 	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 	"github.com/Des1red/goauthlib/internal/uuid"
@@ -40,13 +41,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// 2) Validate access token
 		payload, r2, ok := authenticateRequest(w, r, tok)
 		if !ok {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			authError.Handle(w, r, authError.ErrUnauthorized)
 			return
 		}
 
 		// 3) Enforce JTI
-		if !checkAccessJTI(w, payload) {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		if !checkAccessJTI(payload) {
+			authError.Handle(w, r, authError.ErrUnauthorized)
 			return
 		}
 
@@ -148,7 +149,6 @@ func checkForAnonymousPayload(token string) *tokens.JWTPayload {
 // =========================
 
 func checkAccessJTI(
-	w http.ResponseWriter,
 	payload *tokens.JWTPayload,
 ) bool {
 
@@ -161,7 +161,6 @@ func checkAccessJTI(
 	}
 
 	if payload.Role != tokens.RoleAnonymous() {
-		http.Error(w, "Invalid token structure", http.StatusUnauthorized)
 		return false
 	}
 	return true

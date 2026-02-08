@@ -78,14 +78,16 @@ func refreshAccessToken(
 
 	// 8. Issue new tokens
 	logger.Log("Issuing new tokens")
-	accessToken := tokens.CreateAccessToken(
+	accessToken, err := tokens.CreateAccessToken(
 		w,
 		payload.Role,
 		payload.UUID,
 		newAccessJTI,
 		payload.UserID,
 	)
-
+	if err != nil {
+		return "", err
+	}
 	tokens.CreateRefreshToken(
 		w,
 		payload.Role,

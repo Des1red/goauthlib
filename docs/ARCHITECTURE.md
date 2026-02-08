@@ -136,6 +136,12 @@ The goauth package exposes:
 
         Cookies(...)
 
+        Tokens(...)
+
+        Roles(...)
+
+        Errors(...)
+
 - Auth helpers:
 
         Auth

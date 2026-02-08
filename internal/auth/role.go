@@ -1,10 +1,9 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
-	"strings"
 
+	"github.com/Des1red/goauthlib/internal/authError"
 	"github.com/Des1red/goauthlib/internal/tokens"
 )
 
@@ -20,35 +19,15 @@ func RequireRoleMiddleware(allowedRoles ...string) func(http.HandlerFunc) http.H
 		return func(w http.ResponseWriter, r *http.Request) {
 			payload, ok := r.Context().Value(jwtContextKey{}).(*tokens.JWTPayload)
 
-			wantsJSON :=
-				strings.Contains(r.Header.Get("Accept"), "application/json") ||
-					r.Header.Get("X-Requested-With") == "XMLHttpRequest"
-
 			// Not authenticated
 			if !ok || payload == nil {
-				if wantsJSON {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusUnauthorized)
-					_ = json.NewEncoder(w).Encode(map[string]string{
-						"error": "unauthorized",
-					})
-				} else {
-					w.WriteHeader(http.StatusUnauthorized)
-				}
+				authError.Handle(w, r, authError.ErrUnauthorized)
 				return
 			}
 
 			// Authenticated but forbidden
 			if _, allowed := roleSet[payload.Role]; !allowed {
-				if wantsJSON {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusForbidden)
-					_ = json.NewEncoder(w).Encode(map[string]string{
-						"error": "forbidden",
-					})
-				} else {
-					w.WriteHeader(http.StatusForbidden)
-				}
+				authError.Handle(w, r, authError.ErrForbidden)
 				return
 			}
 

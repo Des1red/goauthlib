@@ -146,45 +146,130 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 // --------------------
 
 func main() {
+	// --------------------------------------------------
+	// Enable verbose logging (development only)
+	// This logs internal auth decisions (token validation,
+	// refresh attempts, role checks, etc).
+	// --------------------------------------------------
 	goauth.Verbose()
+
+	// --------------------------------------------------
+	// Configure JWT signing secret
+	// REQUIRED.
+	// Must be stable across restarts or sessions will break.
+	// --------------------------------------------------
 	goauth.JWTSecret([]byte(os.Getenv("JWT_SECRET")))
+
+	// --------------------------------------------------
+	// Inject token persistence backend
+	// REQUIRED.
+	// goauth does not care how tokens are stored
+	// (sqlite, redis, postgres, memory, etc).
+	// --------------------------------------------------
 	goauth.UseStore(&InMemoryStore{tokens: make(map[string]bool)})
+
+	// --------------------------------------------------
+	// Cookie configuration (optional)
+	// Controls security flags only — NOT auth logic.
+	// --------------------------------------------------
 	goauth.Cookies(goauth.CookieConfig{
-		Secure:   false, // true in production (HTTPS)
+		Secure:   false, // true in production (HTTPS only)
 		SameSite: http.SameSiteStrictMode,
 	})
 
+	// --------------------------------------------------
+	// Token lifetime configuration (optional)
+	// Safe defaults are used if omitted.
+	// --------------------------------------------------
 	goauth.Tokens(goauth.TokenConfig{
-		AccessTTL:  5 * time.Minute,
-		RefreshTTL: 12 * time.Hour,
+		AccessTTL:  5 * time.Minute, // short-lived access token
+		RefreshTTL: 12 * time.Hour,  // long-lived refresh token
 	})
 
+	// --------------------------------------------------
+	// Role configuration (optional)
+	// Allows applications to rename roles without
+	// changing any internal logic.
+	// --------------------------------------------------
+	goauth.Roles(goauth.RolesConfig{
+		User:  "member",
+		Admin: "owner",
+	})
+
+	// --------------------------------------------------
+	// Custom error handling (optional)
+	// This controls *presentation only*.
+	// Auth decisions are unchanged.
+	// --------------------------------------------------
+	goauth.Errors(func(w http.ResponseWriter, r *http.Request, err error) {
+		switch err {
+		case goauth.ErrUnauthorized:
+			// e.g. not logged in / invalid session
+			http.Error(w, "dont know you", http.StatusUnauthorized)
+
+		case goauth.ErrForbidden:
+			// e.g. logged in but wrong role
+			http.Error(w, "nope", http.StatusForbidden)
+
+		default:
+			// internal auth failure (store, JWT, etc)
+			http.Error(w, "auth failure", http.StatusInternalServerError)
+		}
+	})
+
+	// --------------------------------------------------
+	// HTTP routing
+	// goauth does NOT require any framework.
+	// Works with net/http directly.
+	// --------------------------------------------------
 	mux := http.NewServeMux()
 
+	// Public routes
 	mux.HandleFunc("/login", loginPage)
 	mux.HandleFunc("/login/submit", loginHandler)
+
+	// Default redirect
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	})
 
+	// --------------------------------------------------
+	// Protected routes
+	// Requires authenticated user (member OR owner).
+	// No CSRF enforcement here (safe for APIs / GETs).
+	// --------------------------------------------------
 	mux.HandleFunc(
 		"/home",
 		goauth.Protected(homeHandler),
 	)
 
+	// --------------------------------------------------
+	// Browser-protected route with CSRF enforcement
+	// Use for POST/PUT/DELETE from browsers.
+	// --------------------------------------------------
 	mux.HandleFunc(
 		"/profile/update",
 		goauth.ProtectedCsrfActive(updateProfileHandler),
 	)
 
+	// Admin login (demo only)
 	mux.HandleFunc("/login/admin", adminLoginHandler)
 
+	// --------------------------------------------------
+	// Admin-only route
+	// Requires role = owner (admin).
+	// --------------------------------------------------
 	mux.HandleFunc(
 		"/admin",
 		goauth.Admin(adminHandler),
 	)
 
+	// Logout (expires cookies + revokes tokens)
 	mux.HandleFunc("/logout", logoutHandler)
+
+	// --------------------------------------------------
+	// Start HTTP server
+	// --------------------------------------------------
 	host := "localhost"
 	port := ":8000"
 	fmt.Printf("Listening on %s%s\n", host, port)

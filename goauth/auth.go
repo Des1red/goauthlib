@@ -3,6 +3,7 @@ package goauth
 import (
 	"net/http"
 
+	"github.com/Des1red/goauthlib/internal/authError"
 	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 )
@@ -15,6 +16,7 @@ func Verbose() {
 type TokenConfig = tokens.TokenConfig
 type RolesConfig = tokens.Roles
 type CookieConfig = tokens.CookieConfig
+type ErrorHandler = authError.ErrorHandler
 
 // --------------------
 // Setup / configuration
@@ -55,4 +57,11 @@ func Login(w http.ResponseWriter, role string, userID int) {
 // Logout expires cookies and revokes tokens
 func Logout(w http.ResponseWriter, r *http.Request) {
 	tokens.ExpireTokens(w, r)
+}
+
+// Errors allows customizing how authentication / authorization
+// errors are presented (JSON, HTML, redirects, etc).
+// Optional — defaults to plain HTTP errors.
+func Errors(h ErrorHandler) {
+	authError.SetErrorHandler(h)
 }

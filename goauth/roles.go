@@ -2,8 +2,14 @@ package goauth
 
 import "github.com/Des1red/goauthlib/internal/tokens"
 
-const (
-	RoleAnonymous = tokens.RoleAnonymous
-	RoleUser      = tokens.RoleUser
-	RoleAdmin     = tokens.RoleAdmin
-)
+func RoleAnonymous() string {
+	return tokens.RoleAnonymous()
+}
+
+func RoleUser() string {
+	return tokens.RoleUser()
+}
+
+func RoleAdmin() string {
+	return tokens.RoleAdmin()
+}

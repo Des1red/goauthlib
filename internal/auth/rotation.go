@@ -27,7 +27,7 @@ func refreshAccessToken(
 	logger.Log(fmt.Sprintf("Verified refresh token for user %s, role: %s", payload.UUID, payload.Role))
 
 	// 2. Anonymous users cannot refresh
-	if payload.Role == tokens.RoleAnonymous {
+	if payload.Role == tokens.RoleAnonymous() {
 		logger.Log("Anonymous user attempted to refresh token")
 		return "", errors.New("anonymous users cannot refresh")
 	}
@@ -56,8 +56,8 @@ func refreshAccessToken(
 	newAccessJTI := uuid.GenerateUUID()
 	logger.Log(fmt.Sprintf("Generated new JTI for refresh: %s, access: %s", newRefreshJTI, newAccessJTI))
 
-	refreshExpiry := time.Now().Add(tokens.RefreshTokenTime).Unix()
-	accessExpiry := time.Now().Add(tokens.AccessTokenTime).Unix()
+	refreshExpiry := time.Now().Add(tokens.RefreshTTL()).Unix()
+	accessExpiry := time.Now().Add(tokens.AccessTTL()).Unix()
 
 	// 6. Store new tokens
 	logger.Log("Storing new refresh and access tokens")

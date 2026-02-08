@@ -3,12 +3,38 @@ package goauth
 import (
 	"net/http"
 
+	"github.com/Des1red/goauthlib/internal/logger"
 	"github.com/Des1red/goauthlib/internal/tokens"
 )
+
+// Enables Verbose mode (only for developement)
+func Verbose() {
+	logger.EnableVerbose()
+}
+
+type TokenConfig = tokens.TokenConfig
+type RolesConfig = tokens.Roles
+type CookieConfig = tokens.CookieConfig
 
 // --------------------
 // Setup / configuration
 // --------------------
+
+// Tokens configures token lifetimes (optional).
+// Safe defaults are used if not called.
+func Tokens(cfg TokenConfig) {
+	tokens.SetTokenConfig(cfg)
+}
+
+// Roles configures application role names (optional).
+func Roles(cfg RolesConfig) {
+	tokens.SetRoles(cfg)
+}
+
+// Cookies configures auth cookies (secure, samesite, etc.)
+func Cookies(cfg CookieConfig) {
+	tokens.SetCookieConfig(tokens.CookieConfig(cfg))
+}
 
 // UseStore injects the token persistence backend (sqlite, redis, etc.)
 func UseStore(store tokens.TokenStore) {
@@ -19,11 +45,6 @@ func UseStore(store tokens.TokenStore) {
 // MUST be called once at startup.
 func JWTSecret(secret []byte) {
 	tokens.SetJWTSecret(secret)
-}
-
-// Cookies configures auth cookies (secure, samesite, etc.)
-func Cookies(cfg tokens.CookieConfig) {
-	tokens.SetCookieConfig(tokens.CookieConfig(cfg))
 }
 
 // Login issues access + refresh + csrf tokens

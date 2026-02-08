@@ -5,14 +5,7 @@ import (
 
 	"github.com/Des1red/goauthlib/internal/auth"
 	"github.com/Des1red/goauthlib/internal/csrf"
-	"github.com/Des1red/goauthlib/internal/logger"
-	"github.com/Des1red/goauthlib/internal/tokens"
 )
-
-// Enables Verbose mode (only for developement)
-func Verbose() {
-	logger.EnableVerbose()
-}
 
 // Auth attaches authentication context (anonymous allowed)
 func Auth(h http.HandlerFunc) http.HandlerFunc {
@@ -28,8 +21,8 @@ func Require(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 func Protected(h http.HandlerFunc) http.HandlerFunc {
 	return auth.AuthMiddleware(
 		auth.RequireRoleMiddleware(
-			tokens.RoleUser,
-			tokens.RoleAdmin,
+			RoleUser(),
+			RoleAdmin(),
 		)(h),
 	)
 }
@@ -39,8 +32,8 @@ func ProtectedCsrfActive(h http.HandlerFunc) http.HandlerFunc {
 	return auth.AuthMiddleware(
 		csrf.CSRFMiddleware(
 			auth.RequireRoleMiddleware(
-				tokens.RoleUser,
-				tokens.RoleAdmin,
+				RoleUser(),
+				RoleAdmin(),
 			)(h),
 		),
 	)
@@ -49,14 +42,14 @@ func ProtectedCsrfActive(h http.HandlerFunc) http.HandlerFunc {
 // Admin-only routes
 func Admin(h http.HandlerFunc) http.HandlerFunc {
 	return auth.AuthMiddleware(
-		auth.RequireRoleMiddleware(tokens.RoleAdmin)(h),
+		auth.RequireRoleMiddleware(RoleAdmin())(h),
 	)
 }
 
 func AdminCsrfActive(h http.HandlerFunc) http.HandlerFunc {
 	return auth.AuthMiddleware(
 		csrf.CSRFMiddleware(
-			auth.RequireRoleMiddleware(tokens.RoleAdmin)(h),
+			auth.RequireRoleMiddleware(RoleAdmin())(h),
 		),
 	)
 }

@@ -14,7 +14,7 @@ What this library does
 - HTTP middleware for Go servers
 
 You do not modify internal code.
-You configure once, then call high-level helpers.
+Configuration is optional and performed once at startup.
 
 #### Installation
 ```
@@ -41,6 +41,28 @@ Optional:
 goauth.Cookies(goauth.CookieConfig{
     Secure: true,
     SameSite: http.SameSiteStrictMode,
+})
+```
+Optional: Token lifetimes
+
+If not configured, safe defaults are used.
+
+```go
+goauth.Tokens(goauth.TokenConfig{
+    AccessTTL:  5 * time.Minute,
+    RefreshTTL: 12 * time.Hour,
+})
+```
+
+#### Roles (optional)
+
+Role names are configurable at startup.
+If not configured, defaults are used (`user`, `admin`, `anonymous`).
+
+```go
+goauth.Roles(goauth.RolesConfig{
+    User:  "member",
+    Admin: "owner",
 })
 ```
 
@@ -76,8 +98,8 @@ http.HandleFunc("/home",
 ```
 Equivalent to:
 ```go
-Auth(
-    RequireRole(RoleUser, RoleAdmin)(
+goauth.Auth(
+    goauth.Require(goauth.RoleUser(), goauth.RoleAdmin())(
         handler,
     ),
 )
@@ -117,7 +139,7 @@ Rule of thumb:
 
 Call this after you validate credentials:
 ```go
-goauth.Login(w, goauth.RoleUser, userID)
+goauth.Login(w, goauth.RoleUser(), userID)
 ```
 
 This will:
@@ -167,6 +189,8 @@ If no auth cookie is present:
 - RoleAnonymous is set
 
 - No database entry is created
+
+Anonymous role value is configurable via RolesConfig.
 
 #### Notes / guarantees
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Des1red/goauthlib/goauth"
 )
@@ -52,9 +53,33 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// Fake successful login
 	userID := 1
 	log.Println("Logging in user ID:", userID)
-	goauth.Login(w, "user", userID)
+	goauth.Login(w, goauth.RoleUser(), userID)
 
 	http.Redirect(w, r, "/home", http.StatusSeeOther)
+}
+
+func adminHandler(w http.ResponseWriter, r *http.Request) {
+	payload := goauth.FromContext(r.Context())
+	if payload == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	fmt.Fprintf(
+		w,
+		"Welcome admin!\nUserID=%d\nRole=%s\n",
+		payload.UserID,
+		payload.Role,
+	)
+}
+
+func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Fake admin login
+	userID := 42
+	log.Println("Logging in ADMIN user ID:", userID)
+	goauth.Login(w, goauth.RoleAdmin(), userID)
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +149,15 @@ func main() {
 	goauth.Verbose()
 	goauth.JWTSecret([]byte(os.Getenv("JWT_SECRET")))
 	goauth.UseStore(&InMemoryStore{tokens: make(map[string]bool)})
+	goauth.Cookies(goauth.CookieConfig{
+		Secure:   false, // true in production (HTTPS)
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	goauth.Tokens(goauth.TokenConfig{
+		AccessTTL:  5 * time.Minute,
+		RefreshTTL: 12 * time.Hour,
+	})
 
 	mux := http.NewServeMux()
 
@@ -141,6 +175,13 @@ func main() {
 	mux.HandleFunc(
 		"/profile/update",
 		goauth.ProtectedCsrfActive(updateProfileHandler),
+	)
+
+	mux.HandleFunc("/login/admin", adminLoginHandler)
+
+	mux.HandleFunc(
+		"/admin",
+		goauth.Admin(adminHandler),
 	)
 
 	mux.HandleFunc("/logout", logoutHandler)

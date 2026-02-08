@@ -137,7 +137,7 @@ func checkForAnonymousPayload(token string) *tokens.JWTPayload {
 		return nil
 	}
 
-	if payload.Role == tokens.RoleAnonymous {
+	if payload.Role == tokens.RoleAnonymous() {
 		return &payload
 	}
 	return nil
@@ -160,7 +160,7 @@ func checkAccessJTI(
 		return true
 	}
 
-	if payload.Role != tokens.RoleAnonymous {
+	if payload.Role != tokens.RoleAnonymous() {
 		http.Error(w, "Invalid token structure", http.StatusUnauthorized)
 		return false
 	}

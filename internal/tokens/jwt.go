@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ var secretKey []byte
 func SetJWTSecret(secret []byte) {
 	// copy to avoid external mutation
 	if secret == nil {
-		secretKey = nil
+		log.Fatal("JWT_SECRET not set")
 		return
 	}
 	secretKey = append([]byte(nil), secret...)

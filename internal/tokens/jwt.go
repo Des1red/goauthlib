@@ -16,9 +16,8 @@ var secretKey []byte
 
 func SetJWTSecret(secret []byte) {
 	// copy to avoid external mutation
-	if secret == nil {
+	if len(secret) == 0 {
 		log.Fatal("JWT_SECRET not set")
-		return
 	}
 	secretKey = append([]byte(nil), secret...)
 }

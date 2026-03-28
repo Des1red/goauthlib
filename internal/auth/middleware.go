@@ -51,23 +51,9 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// 2) Validate access token
-		payload, r2, ok := authenticateRequest(w, r, tok)
+		_, r2, ok := authenticateRequest(w, r, tok)
 		if !ok {
 			logger.Log("Unauthenticated request")
-			authError.Handle(w, r, authError.ErrUnauthorized)
-			return
-		}
-
-		// 3) Enforce JTI
-		if !checkAccessJTI(payload) {
-			logger.Log(
-				fmt.Sprintf(
-					"Access token rejected: JTI not found user_id=%d role=%s jti=%s",
-					payload.UserID,
-					payload.Role,
-					payload.JTI,
-				),
-			)
 			authError.Handle(w, r, authError.ErrUnauthorized)
 			return
 		}
@@ -110,45 +96,74 @@ func authenticateRequest(
 	accessToken string,
 ) (*tokens.JWTPayload, *http.Request, bool) {
 	logger.Log("Validating access token: " + accessToken)
+
 	payload, err := tokens.VerifyJWT(accessToken, tokens.TokenTypeAccess)
 	if err == nil {
-		ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
-		return payload, r.WithContext(ctx), true
+		if checkAccessJTI(payload) {
+			ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
+			return payload, r.WithContext(ctx), true
+		}
+
+		logger.Log(
+			fmt.Sprintf(
+				"Access token rejected: JTI invalid or missing | rejected: JTI not found user_id=%d role=%s jti=%s",
+				payload.UserID,
+				payload.Role,
+				payload.JTI,
+			),
+		)
+
+		// stale/revoked access token: drop it and try refresh
+		tokens.ExpireAccessToken(w)
 	}
 
-	if errors.Is(err, tokens.ErrTokenExpired) {
-		if anon := checkForAnonymousPayload(accessToken); anon != nil {
-			ctx := context.WithValue(r.Context(), jwtContextKey{}, anon)
-			u := uuid.GenerateUUID()
-			tokens.CreateAnonymousToken(w, u)
-			return anon, r.WithContext(ctx), true
-		}
-
-		// 2. Try refresh
-		refreshTok, ok := getCookieValue(r, "refresh_token")
-		if !ok {
-			logger.Log("Refresh token not found in cookies")
-			return nil, r, false
-		}
-		logger.Log("Found refresh token:" + refreshTok)
-
-		newAccess, err := refreshAccessToken(refreshTok, w, r)
-		if err != nil {
-			return nil, r, false
-		}
-		// 3. Verify new access token
-		payload, err = tokens.VerifyJWT(newAccess, tokens.TokenTypeAccess)
-		if err != nil {
-			return nil, r, false
-		}
-		ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
-		return payload, r.WithContext(ctx), true
-
+	if err != nil && !errors.Is(err, tokens.ErrTokenExpired) {
+		logger.Log("Access token invalid: " + err.Error())
+		tokens.ExpireTokens(w, r)
+		return nil, r, false
 	}
-	// log any other type of error
-	logger.Log("Access token invalid: " + err.Error())
 
-	return nil, r, false
+	if anon := checkForAnonymousPayload(accessToken); anon != nil {
+		ctx := context.WithValue(r.Context(), jwtContextKey{}, anon)
+		u := uuid.GenerateUUID()
+		tokens.CreateAnonymousToken(w, u)
+		return anon, r.WithContext(ctx), true
+	}
+
+	refreshTok, ok := getCookieValue(r, "refresh_token")
+	if !ok {
+		logger.Log("Refresh token not found in cookies")
+		tokens.ExpireTokens(w, r)
+		return nil, r, false
+	}
+	logger.Log("Found refresh token:" + refreshTok)
+
+	newAccess, err := refreshAccessToken(refreshTok, w, r)
+	if err != nil {
+		return nil, r, false
+	}
+
+	payload, err = tokens.VerifyJWT(newAccess, tokens.TokenTypeAccess)
+	if err != nil {
+		tokens.ExpireTokens(w, r)
+		return nil, r, false
+	}
+
+	if !checkAccessJTI(payload) {
+		logger.Log(
+			fmt.Sprintf(
+				"New access token rejected: JTI not found user_id=%d role=%s jti=%s",
+				payload.UserID,
+				payload.Role,
+				payload.JTI,
+			),
+		)
+		tokens.ExpireTokens(w, r)
+		return nil, r, false
+	}
+
+	ctx := context.WithValue(r.Context(), jwtContextKey{}, payload)
+	return payload, r.WithContext(ctx), true
 }
 
 func checkForAnonymousPayload(token string) *tokens.JWTPayload {

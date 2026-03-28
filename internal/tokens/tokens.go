@@ -150,13 +150,14 @@ func CreateTokens(
 	u := uuid.GenerateUUID()
 	refreshJTI := uuid.GenerateUUID()
 	accessJTI := uuid.GenerateUUID()
-	expiry := time.Now().Add(tokenCfg.RefreshTTL).Unix()
+	refreshExpiry := time.Now().Add(tokenCfg.RefreshTTL).Unix()
+	accessExpiry := time.Now().Add(tokenCfg.AccessTTL).Unix()
 
 	// Store refresh token & access JTI
-	if err := store.SaveToken(u, refreshJTI, TokenTypeRefresh, expiry); err != nil {
+	if err := store.SaveToken(u, refreshJTI, TokenTypeRefresh, refreshExpiry); err != nil {
 		return ErrDBInvalid
 	}
-	if err := store.SaveToken(u, accessJTI, TokenTypeAccess, expiry); err != nil {
+	if err := store.SaveToken(u, accessJTI, TokenTypeAccess, accessExpiry); err != nil {
 		return ErrDBInvalid
 	}
 

@@ -23,6 +23,7 @@ func refreshAccessToken(
 	payload, err := tokens.VerifyJWT(refreshToken, tokens.TokenTypeRefresh)
 	if err != nil {
 		logger.Log(fmt.Sprintf("Error verifying refresh token: %v", err))
+		tokens.ExpireTokens(w, r)
 		return "", err
 	}
 	logger.Log(fmt.Sprintf("Verified refresh token for user %s, role: %s", payload.UUID, payload.Role))
@@ -30,13 +31,15 @@ func refreshAccessToken(
 	// 2. Anonymous users cannot refresh
 	if payload.Role == tokens.RoleAnonymous() {
 		logger.Log("Anonymous user attempted to refresh token")
-		return "", err
+		tokens.ExpireTokens(w, r)
+		return "", authError.ErrUnauthorized
 	}
 
 	// 3. Check refresh JTI exists (one-time-use)
 	exists, err := tokens.TokenExists(payload.JTI)
 	if err != nil {
 		logger.Log(fmt.Sprintf("Refresh token JTI lookup failed: %v", err))
+		tokens.ExpireTokens(w, r)
 		return "", err
 	}
 
@@ -49,6 +52,7 @@ func refreshAccessToken(
 	logger.Log("Refresh token JTI is valid, deleting used token")
 	if err := tokens.DeleteToken(payload.JTI); err != nil {
 		logger.Log(fmt.Sprintf("Failed to revoke refresh token: %v", err))
+		tokens.ExpireTokens(w, r)
 		return "", err
 	}
 

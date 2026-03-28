@@ -50,8 +50,8 @@ func JWTSecret(secret []byte) {
 }
 
 // Login issues access + refresh + csrf tokens
-func Login(w http.ResponseWriter, role string, userID int) {
-	tokens.CreateTokens(w, role, userID)
+func Login(w http.ResponseWriter, role string, userID int) error {
+	return tokens.CreateTokens(w, role, userID)
 }
 
 // Logout expires cookies and revokes tokens

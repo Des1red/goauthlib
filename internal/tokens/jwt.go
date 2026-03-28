@@ -1,7 +1,6 @@
 package tokens
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -16,7 +15,7 @@ var secretKey []byte
 
 func SetJWTSecret(secret []byte) {
 	// copy to avoid external mutation
-	if secret == nil {
+	if len(secret) == 0 {
 		log.Fatal("JWT_SECRET not set")
 		return
 	}
@@ -138,13 +137,4 @@ func VerifyJWT(token, expectedType string) (*JWTPayload, error) {
 	}
 
 	return &payload, nil
-}
-
-// Extract data from jwt
-func GetJWTFromContext(ctx context.Context) *JWTPayload {
-	payload, ok := ctx.Value("jwtPayload").(*JWTPayload)
-	if !ok {
-		return nil
-	}
-	return payload
 }

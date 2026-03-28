@@ -30,14 +30,23 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		logger.Newline()
 		logger.Log("AuthMiddleware entered")
 
-		clearSessionKilledIfPresent(w, r)
+		if clearSessionKilledIfPresent(w, r) {
+			return
+		}
 
 		// 1) Grab auth cookie
 		tok, ok := getCookieValue(r, "auth_token")
 		if !ok {
 			u := uuid.GenerateUUID()
 			tokens.CreateAnonymousToken(w, u)
-			next.ServeHTTP(w, r)
+			anon := &tokens.JWTPayload{
+				UUID:   u,
+				Role:   tokens.RoleAnonymous(),
+				UserID: tokens.AnonymousUserID,
+			}
+
+			ctx := context.WithValue(r.Context(), jwtContextKey{}, anon)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
@@ -71,10 +80,16 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // helpers
 // =========================
 
-func clearSessionKilledIfPresent(w http.ResponseWriter, r *http.Request) {
+func clearSessionKilledIfPresent(w http.ResponseWriter, r *http.Request) bool {
 	if ck, err := r.Cookie("session_killed"); err == nil && ck.Value == "true" {
+		tokens.ExpireAccessToken(w)
+		tokens.ExpireRefreshToken(w)
+		tokens.ExpireCsrfToken(w)
 		tokens.ExpireSessionKilledToken(w)
+		authError.Handle(w, r, authError.ErrUnauthorized)
+		return true
 	}
+	return false
 }
 
 func getCookieValue(r *http.Request, name string) (string, bool) {

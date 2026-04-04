@@ -163,6 +163,8 @@ func CreateTokens(
 
 	// expire anonymous/access token cookie first
 	ExpireAccessToken(w)
+	// expire session killed token if any
+	ExpireSessionKilledToken(w)
 
 	// issue tokens
 	_, _ = CreateAccessToken(w, role, u, accessJTI, userID)
